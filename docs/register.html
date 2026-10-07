@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация — Пробный ЕГЭ по информатике</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .error-msg {
+            color: #721c24;
+            background: #f8d7da;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .success-msg {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="auth-container">
+        <h1>Регистрация</h1>
+
+        <div id="message"></div>
+
+        <form id="registerForm">
+            <label>
+                Фамилия и имя
+                <input type="text" id="name" placeholder="Иванов Иван" required>
+            </label>
+
+            <label>
+                Класс
+                <input type="text" id="grade" placeholder="10А" required>
+            </label>
+
+            <label>
+                Логин
+                <input type="text" id="login" placeholder="Придумайте логин" required>
+            </label>
+
+            <label>
+                Пароль
+                <input type="password" id="password" placeholder="Минимум 6 символов" minlength="6" required>
+            </label>
+
+            <button type="submit">Создать аккаунт</button>
+        </form>
+
+        <p class="links">
+            Уже есть аккаунт? <a href="login.html">Войти</a>
+        </p>
+    </div>
+
+    <script>
+        // ⚠️ ВСТАВЬ СЮДА СВОЙ URL ИЗ APPS SCRIPT
+        const API_URL = "https://script.google.com/macros/s/AKfycbwHGMlNY57d9v67PpM2JS0S0nrTPUlLbpfbCE4yk7ELyWBLBmiURgrzC2ujRv2258_7Cw/exec";
+
+        const form = document.getElementById('registerForm');
+        const message = document.getElementById('message');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value.trim();
+            const grade = document.getElementById('grade').value.trim();
+            const login = document.getElementById('login').value.trim();
+            const password = document.getElementById('password').value;
+
+            message.innerHTML = '';
+
+            if (password.length < 6) {
+                message.innerHTML = '<div class="error-msg">Пароль должен быть не короче 6 символов</div>';
+                return;
+            }
+
+            message.innerHTML = '<div class="success-msg">Отправка...</div>';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ name, grade, login, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Перекидываем на страницу входа с флагом "registered"
+                    window.location.href = 'login.html?registered=1';
+                } else {
+                    message.innerHTML = '<div class="error-msg">❌ ' + (data.error || 'Ошибка регистрации') + '</div>';
+                }
+            } catch (error) {
+                message.innerHTML = '<div class="error-msg">❌ Ошибка соединения: ' + error.message + '</div>';
+            }
+        });
+    </script>
+
+</body>
+</html>

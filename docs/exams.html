@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Экзамены — Пробный ЕГЭ по информатике</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <span class="logo">💻 Пробный ЕГЭ — Информатика</span>
+        <nav>
+            <a href="dashboard.html">Кабинет</a>
+            <a href="exams.html">Экзамены</a>
+            <a href="stats.html">Моя статистика</a>
+            <a href="#" id="logoutBtn">Выйти</a>
+        </nav>
+    </header>
+
+    <main>
+        <h1>Пробные экзамены по информатике</h1>
+
+        <h2 class="section-title">📅 Предстоящие</h2>
+        <div id="upcomingBlock" class="grid">
+            <p style="color: #aaa;">Загрузка...</p>
+        </div>
+
+        <h2 class="section-title">✅ Прошедшие</h2>
+        <div id="finishedBlock" class="grid">
+            <p style="color: #aaa;">Загрузка...</p>
+        </div>
+    </main>
+
+    <script>
+        // ⚠️ ВСТАВЬ СВОЙ URL ИЗ APPS SCRIPT
+        const API_URL = "https://script.google.com/macros/s/AKfycbwHGMlNY57d9v67PpM2JS0S0nrTPUlLbpfbCE4yk7ELyWBLBmiURgrzC2ujRv2258_7Cw/exec";
+
+        // Проверяем, вошёл ли пользователь
+        const userJson = localStorage.getItem('currentUser');
+        if (!userJson) {
+            window.location.href = 'login.html';
+        }
+        const user = JSON.parse(userJson);
+
+        // Выход
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        });
+
+        // ====== ЗАГРУЗКА ВСЕХ ЭКЗАМЕНОВ ======
+        async function loadExams() {
+            const upcomingBlock = document.getElementById('upcomingBlock');
+            const finishedBlock = document.getElementById('finishedBlock');
+
+            try {
+                // 1. Загружаем экзамены
+                const examsUrl = `${API_URL}?action=getExams`;
+                const examsResp = await fetch(examsUrl);
+                const examsData = await examsResp.json();
+
+                // 2. Загружаем записи ученика
+                const signupsUrl = `${API_URL}?action=getUserSignups&login=${encodeURIComponent(user.login)}`;
+                const signupsResp = await fetch(signupsUrl);
+                const signupsData = await signupsResp.json();
+                const mySignups = signupsData.signups || [];
+
+                // 3. Рисуем предстоящие
+                if (!examsData.upcoming || examsData.upcoming.length === 0) {
+                    upcomingBlock.innerHTML = `
+                        <section class="card">
+                            <p style="color: #888;">Предстоящих экзаменов пока нет.</p>
+                        </section>
+                    `;
+                } else {
+                    upcomingBlock.innerHTML = examsData.upcoming.map(exam => {
+                        const isSigned = mySignups.includes(exam.title);
+                        return `
+                            <div class="exam-card">
+                                <h3>${exam.title}</h3>
+                                <p class="meta">📅 ${exam.date}${exam.time ? ', ' + exam.time : ''}</p>
+                                ${exam.duration ? `<p class="meta">⏱ ${exam.duration}</p>` : ''}
+                                <p style="margin-top: 10px;">
+                                    ${isSigned
+                                        ? '<span class="badge badge-green">Вы записаны</span>'
+                                        : '<span class="badge badge-yellow">Не записан</span>'}
+                                </p>
+                                <div style="margin-top: 12px;">
+                                    ${isSigned
+                                        ? `<button class="btn btn-secondary" data-action="cancel" data-exam="${exam.title}">Отменить запись</button>`
+                                        : `<button class="btn" style="background: #27ae60;" data-action="signup" data-exam="${exam.title}">✍️ Записаться</button>`}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // 4. Рисуем прошедшие
+                if (!examsData.finished || examsData.finished.length === 0) {
+                    finishedBlock.innerHTML = `
+                        <section class="card">
+                            <p style="color: #888;">Прошедших экзаменов пока нет.</p>
+                        </section>
+                    `;
+                } else {
+                    finishedBlock.innerHTML = examsData.finished.map(exam => `
+                        <div class="exam-card" style="border-left-color: #95a5a6;">
+                            <h3>${exam.title}</h3>
+                            <p class="meta">📅 ${exam.date}${exam.time ? ', ' + exam.time : ''}</p>
+                            <a href="stats.html" class="btn btn-secondary" style="margin-top: 12px;">Разбор</a>
+                        </div>
+                    `).join('');
+                }
+
+                // 5. Навешиваем обработчики на кнопки
+                document.querySelectorAll('button[data-action]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const action = btn.getAttribute('data-action');
+                        const examTitle = btn.getAttribute('data-exam');
+                        const apiAction = action === 'signup' ? 'signup' : 'cancelSignup';
+                        const url = `${API_URL}?action=${apiAction}&login=${encodeURIComponent(user.login)}&exam=${encodeURIComponent(examTitle)}`;
+
+                        const resp = await fetch(url);
+                        const res = await resp.json();
+
+                        if (!res.success) {
+                            alert('❌ ' + (res.error || 'Ошибка'));
+                        }
+                        loadExams();
+                    });
+                });
+
+            } catch (error) {
+                upcomingBlock.innerHTML = `
+                    <section class="card">
+                        <p style="color: #e74c3c;">Ошибка загрузки: ${error.message}</p>
+                    </section>
+                `;
+                finishedBlock.innerHTML = '';
+            }
+        }
+
+        loadExams();
+    </script>
+
+</body>
+</html>
