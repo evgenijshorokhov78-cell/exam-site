@@ -59,7 +59,7 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('registered') === '1') {
-            message.innerHTML = '<div class="warning-msg">✅ Регистрация принята! Дождитесь одобрения учителем — после этого вы сможете войти.</div>';
+            message.innerHTML = '<div class="warning-msg">✅ Регистрация принята! Дождитесь одобрения системы — после этого вы сможете войти.</div>';
         }
 
         form.addEventListener('submit', async (e) => {
@@ -88,7 +88,7 @@
                     }
 
                 } else if (data.error === 'pending') {
-                    message.innerHTML = '<div class="warning-msg">⏳ Ваша заявка на рассмотрении. Дождитесь одобрения учителем.</div>';
+                    message.innerHTML = '<div class="warning-msg">⏳ Ваша заявка на рассмотрении. Дождитесь одобрения системой.</div>';
 
                 } else if (data.error === 'rejected') {
                     message.innerHTML = '<div class="error-msg">❌ Ваша заявка отклонена.</div>';
