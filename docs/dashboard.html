@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Личный кабинет — Пробный ЕГЭ по информатике</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 </head>
 <body>
 
@@ -21,14 +22,11 @@
     <main>
         <h1>Привет, <span id="userName">...</span>! 👋</h1>
         <p style="color: #888; margin-bottom: 20px;">
-            Логин: <span id="userLogin">...</span>
-            · Класс: <span id="userGrade">...</span>
+            Логин: <span id="userLogin">...</span> · Класс: <span id="userGrade">...</span>
         </p>
 
         <div id="loading" style="text-align: center; padding: 60px 20px; color: #888;">
-            <div style="display: inline-block; width: 40px; height: 40px;
-                        border: 4px solid #e0e0e0; border-top-color: #3498db;
-                        border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+            <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top-color: #3498db; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
             <p style="margin-top: 16px; font-size: 15px;">Загрузка данных...</p>
         </div>
 
@@ -38,17 +36,13 @@
         </div>
     </main>
 
-    <style>
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
-
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbwHGMlNY57d9v67PpM2JS0S0nrTPUlLbpfbCE4yk7ELyWBLBmiURgrzC2ujRv2258_7Cw/exec";
 
-        const userJson = localStorage.getItem('currentUser');
-        if (!userJson) {
+        const token = localStorage.getItem('authToken');
+        const userJson = localStorage.getItem('userInfo');
+
+        if (!token || !userJson) {
             window.location.href = 'login.html';
         }
         const user = JSON.parse(userJson);
@@ -57,32 +51,39 @@
         document.getElementById('userLogin').textContent = user.login;
         document.getElementById('userGrade').textContent = user.grade;
 
-        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
             e.preventDefault();
-            localStorage.removeItem('currentUser');
+            try {
+                await fetch(`${API_URL}?action=logout&token=${encodeURIComponent(token)}`);
+            } catch (err) {}
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userInfo');
             window.location.href = 'login.html';
         });
 
         async function loadDashboard() {
             try {
-                const url = `${API_URL}?action=getDashboardData&login=${encodeURIComponent(user.login)}`;
+                const url = `${API_URL}?action=getDashboardData&token=${encodeURIComponent(token)}`;
                 const response = await fetch(url);
                 const data = await response.json();
+
+                if (!data.success) {
+                    // Токен недействителен — выкидываем на вход
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('userInfo');
+                    window.location.href = 'login.html';
+                    return;
+                }
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
 
-                // ===== БЛОК БЛИЖАЙШЕГО ЭКЗАМЕНА =====
+                // ===== БЛИЖАЙШИЙ ЭКЗАМЕН =====
                 const examBlock = document.getElementById('nextExamBlock');
                 const nextExam = data.exams[0];
 
                 if (!nextExam) {
-                    examBlock.innerHTML = `
-                        <section class="card">
-                            <h2>Ближайший экзамен</h2>
-                            <p style="color: #888;">Пока нет предстоящих экзаменов.</p>
-                        </section>
-                    `;
+                    examBlock.innerHTML = `<section class="card"><h2>Ближайший экзамен</h2><p style="color: #888;">Пока нет предстоящих экзаменов.</p></section>`;
                 } else {
                     const isSigned = data.signups.includes(nextExam.title);
                     const isOpen = nextExam.signupOpen !== false;
@@ -99,62 +100,33 @@
                             ${!isOpen ? `
                                 <h2>Запись закрыта</h2>
                                 <p style="color: #666; margin: 8px 0 14px;">${nextExam.title}</p>
-                                <p style="margin-bottom: 12px;">
-                                    <span class="badge badge-red">❌ Запись закрыта</span>
-                                </p>
-                                <p style="color: #888; font-size: 14px;">
-                                    Записаться на этот экзамен больше нельзя.
-                                </p>
+                                <p><span class="badge badge-red">❌ Запись закрыта</span></p>
                             ` : isSigned ? `
                                 <h2>Вы записаны на экзамен</h2>
                                 <p style="color: #666; margin: 8px 0 14px;">${nextExam.title}</p>
-                                <p style="margin-bottom: 18px;">
-                                    <span class="badge badge-green">✅ Запись активна</span>
-                                </p>
-                                <button class="btn btn-secondary" id="cancelBtn"
-                                        style="font-size: 15px; padding: 12px 28px;">
-                                    Отменить запись
-                                </button>
-                                ${nextExam.daysUntilClose !== null ? `
-                                    <p style="color: #f39c12; font-size: 13px; margin-top: 12px;">
-                                        ⏰ Изменение записи возможно ещё ${nextExam.daysUntilClose} дн.
-                                    </p>
-                                ` : ''}
+                                <p style="margin-bottom: 18px;"><span class="badge badge-green">✅ Запись активна</span></p>
+                                <button class="btn btn-secondary" id="cancelBtn" style="font-size: 15px; padding: 12px 28px;">Отменить запись</button>
                             ` : `
                                 <h2>Хотите проверить силы?</h2>
-                                <p style="color: #666; margin: 8px 0 18px;">
-                                    Запишитесь на ближайший пробный экзамен по информатике
-                                </p>
-                                <button class="btn" id="signupBtn"
-                                        style="background: #27ae60; font-size: 16px; padding: 14px 32px;">
-                                    ✍️ Записаться на пробный экзамен
-                                </button>
-                                ${nextExam.daysUntilClose !== null ? `
-                                    <p style="color: #f39c12; font-size: 13px; margin-top: 12px;">
-                                        ⏰ Запись закроется через ${nextExam.daysUntilClose} дн.
-                                    </p>
-                                ` : ''}
+                                <p style="color: #666; margin: 8px 0 18px;">Запишитесь на ближайший пробный экзамен</p>
+                                <button class="btn" id="signupBtn" style="background: #27ae60; font-size: 16px; padding: 14px 32px;">✍️ Записаться</button>
+                                ${nextExam.daysUntilClose !== null ? `<p style="color: #f39c12; font-size: 13px; margin-top: 12px;">⏰ Запись закроется через ${nextExam.daysUntilClose} дн.</p>` : ''}
                             `}
                         </section>
                     `;
 
-                    // Обработчики
-                    if (!isOpen) {
-                        // Ничего
-                    } else if (isSigned) {
+                    if (isOpen && isSigned) {
                         document.getElementById('cancelBtn').addEventListener('click', async () => {
                             document.getElementById('loading').style.display = 'block';
                             document.getElementById('content').style.display = 'none';
-                            const url = `${API_URL}?action=cancelSignup&login=${encodeURIComponent(user.login)}&exam=${encodeURIComponent(nextExam.title)}`;
-                            await fetch(url);
+                            await fetch(`${API_URL}?action=cancelSignup&token=${encodeURIComponent(token)}&exam=${encodeURIComponent(nextExam.title)}`);
                             loadDashboard();
                         });
-                    } else {
+                    } else if (isOpen && !isSigned) {
                         document.getElementById('signupBtn').addEventListener('click', async () => {
                             document.getElementById('loading').style.display = 'block';
                             document.getElementById('content').style.display = 'none';
-                            const url = `${API_URL}?action=signup&login=${encodeURIComponent(user.login)}&exam=${encodeURIComponent(nextExam.title)}`;
-                            const resp = await fetch(url);
+                            const resp = await fetch(`${API_URL}?action=signup&token=${encodeURIComponent(token)}&exam=${encodeURIComponent(nextExam.title)}`);
                             const res = await resp.json();
                             if (!res.success) alert('❌ ' + (res.error || 'Ошибка'));
                             loadDashboard();
@@ -162,44 +134,27 @@
                     }
                 }
 
-                // ===== БЛОК ПОСЛЕДНЕГО РЕЗУЛЬТАТА =====
+                // ===== ПОСЛЕДНИЙ РЕЗУЛЬТАТ =====
                 const resultBlock = document.getElementById('lastResultBlock');
                 const last = data.results[0];
 
                 if (!last) {
-                    resultBlock.innerHTML = `
-                        <section class="card">
-                            <h2>Последний результат</h2>
-                            <p style="color: #888;">Пока нет результатов.</p>
-                            <p style="color: #aaa; font-size: 13px; margin-top: 6px;">
-                                После первого экзамена здесь появится ваш балл.
-                            </p>
-                        </section>
-                    `;
+                    resultBlock.innerHTML = `<section class="card"><h2>Последний результат</h2><p style="color: #888;">Пока нет результатов.</p></section>`;
                 } else {
                     resultBlock.innerHTML = `
                         <section class="card">
                             <h2>Последний результат</h2>
                             <p style="font-size: 36px; font-weight: bold; color: #3498db;">${last.test}</p>
                             <p style="color: #888;">тестовых баллов</p>
-                            <p style="color: #555; font-size: 14px; margin-top: 6px;">
-                                первичный балл: <strong>${last.primary} / 29</strong>
-                            </p>
+                            <p style="color: #555; font-size: 14px; margin-top: 6px;">первичный балл: <strong>${last.primary} / 29</strong></p>
                             <p style="color: #888; font-size: 13px; margin-top: 4px;">${last.exam}</p>
-                            <a href="stats.html" class="btn btn-secondary" style="margin-top: 12px;">
-                                Смотреть статистику
-                            </a>
+                            <a href="stats.html" class="btn btn-secondary" style="margin-top: 12px;">Смотреть статистику</a>
                         </section>
                     `;
                 }
 
             } catch (error) {
-                document.getElementById('loading').innerHTML = `
-                    <p style="color: #e74c3c;">Ошибка загрузки: ${error.message}</p>
-                    <button class="btn" style="margin-top: 16px;" onclick="location.reload()">
-                        Попробовать снова
-                    </button>
-                `;
+                document.getElementById('loading').innerHTML = `<p style="color: #e74c3c;">Ошибка: ${error.message}</p><button class="btn" style="margin-top: 16px;" onclick="location.reload()">Повторить</button>`;
             }
         }
 
