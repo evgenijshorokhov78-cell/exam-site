@@ -6,52 +6,26 @@
     <title>Вход — Пробный ЕГЭ по информатике</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .error-msg {
-            color: #721c24;
-            background: #f8d7da;
-            padding: 10px 14px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 14px;
-        }
-        .success-msg {
-            color: #155724;
-            background: #d4edda;
-            padding: 10px 14px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 14px;
-        }
+        .error-msg { color: #721c24; background: #f8d7da; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+        .success-msg { color: #155724; background: #d4edda; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
     </style>
 </head>
 <body>
 
     <div class="auth-container">
         <h1>Вход</h1>
-
         <div id="message"></div>
-
         <form id="loginForm">
-            <label>
-                Логин
-                <input type="text" id="login" placeholder="Введите логин" required>
-            </label>
-
-            <label>
-                Пароль
-                <input type="password" id="password" placeholder="Введите пароль" required>
-            </label>
-
+            <label>Логин<input type="text" id="login" placeholder="Введите логин" required></label>
+            <label>Пароль<input type="password" id="password" placeholder="Введите пароль" required></label>
             <button type="submit">Войти</button>
         </form>
-
-        <p class="links">
-            Нет аккаунта? <a href="register.html">Зарегистрироваться</a>
-        </p>
+        <p class="links">Нет аккаунта? <a href="register.html">Зарегистрироваться</a></p>
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbwHGMlNY57d9v67PpM2JS0S0nrTPUlLbpfbCE4yk7ELyWBLBmiURgrzC2ujRv2258_7Cw/exec";
+        // ⚠️ ЗАМЕНИ НА СВОЙ URL
+        const API_URL = "ВСТАВЬ_СЮДА_ТВОЙ_WEB_APP_URL";
 
         const form = document.getElementById('loginForm');
         const message = document.getElementById('message');
@@ -63,10 +37,8 @@
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-
             const login = document.getElementById('login').value.trim();
             const password = document.getElementById('password').value;
-
             message.innerHTML = '';
 
             try {
@@ -75,8 +47,15 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    localStorage.setItem('currentUser', JSON.stringify(data.user));
-                    window.location.href = 'dashboard.html';
+                    // ⚠️ Сохраняем ТОКЕН, не пароль
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('userInfo', JSON.stringify(data.user));
+
+                    if (data.user.role === 'admin') {
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'dashboard.html';
+                    }
                 } else {
                     message.innerHTML = '<div class="error-msg">❌ ' + (data.error || 'Неверный логин или пароль') + '</div>';
                 }
