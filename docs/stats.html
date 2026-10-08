@@ -6,9 +6,7 @@
     <title>Моя статистика — Пробный ЕГЭ по информатике</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -38,17 +36,24 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        // ⚠️ ЗАМЕНИ НА СВОЙ URL
         const API_URL = "https://script.google.com/macros/s/AKfycbwHGMlNY57d9v67PpM2JS0S0nrTPUlLbpfbCE4yk7ELyWBLBmiURgrzC2ujRv2258_7Cw/exec";
 
-        const userJson = localStorage.getItem('currentUser');
-        if (!userJson) {
+        const token = localStorage.getItem('authToken');
+        const userJson = localStorage.getItem('userInfo');
+
+        if (!token || !userJson) {
             window.location.href = 'login.html';
         }
         const user = JSON.parse(userJson);
 
-        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
             e.preventDefault();
-            localStorage.removeItem('currentUser');
+            try {
+                await fetch(`${API_URL}?action=logout&token=${encodeURIComponent(token)}`);
+            } catch (err) {}
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userInfo');
             window.location.href = 'login.html';
         });
 
@@ -57,17 +62,26 @@
             const loading = document.getElementById('loading');
 
             try {
-                const url = `${API_URL}?action=getUserResults&login=${encodeURIComponent(user.login)}`;
+                const url = `${API_URL}?action=getUserResults&token=${encodeURIComponent(token)}`;
                 const response = await fetch(url);
                 const data = await response.json();
 
-                loading.style.display = 'none';
-                content.style.display = 'block';
-
+                // Если токен недействителен — выкидываем
                 if (!data.success) {
+                    if (data.error === "Не авторизован") {
+                        localStorage.removeItem('authToken');
+                        localStorage.removeItem('userInfo');
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
                     content.innerHTML = `<section class="card"><p style="color: #e74c3c;">Ошибка: ${data.error}</p></section>`;
                     return;
                 }
+
+                loading.style.display = 'none';
+                content.style.display = 'block';
 
                 const results = data.results || [];
 
