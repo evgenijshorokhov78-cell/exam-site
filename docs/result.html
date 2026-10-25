@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Разбор экзамена — Пробный ЕГЭ по информатике</title>
     <link rel="stylesheet" href="css/style.css">
-    <style>
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 </head>
 <body>
 
@@ -41,29 +39,21 @@
 
         const token = localStorage.getItem('authToken');
         const userJson = localStorage.getItem('userInfo');
-
-        if (!token || !userJson) {
-            window.location.href = 'login.html';
-        }
+        if (!token || !userJson) window.location.href = 'login.html';
         const user = JSON.parse(userJson);
 
         document.getElementById('logoutBtn').addEventListener('click', async (e) => {
             e.preventDefault();
-            try {
-                await fetch(`${API_URL}?action=logout&token=${encodeURIComponent(token)}`);
-            } catch (err) {}
+            try { await fetch(`${API_URL}?action=logout&token=${encodeURIComponent(token)}`); } catch (err) {}
             localStorage.removeItem('authToken');
             localStorage.removeItem('userInfo');
             window.location.href = 'login.html';
         });
 
-        // Получаем название экзамена из URL (?exam=...)
         const urlParams = new URLSearchParams(window.location.search);
         const examName = urlParams.get('exam');
 
-        if (!examName) {
-            window.location.href = 'stats.html';
-        }
+        if (!examName) window.location.href = 'stats.html';
 
         document.getElementById('examTitle').textContent = examName;
 
@@ -92,31 +82,20 @@
                 loading.style.display = 'none';
                 content.style.display = 'block';
 
-                // Находим нужный экзамен
                 const result = (data.results || []).find(r => r.exam === examName);
 
                 if (!result) {
-                    content.innerHTML = `
-                        <section class="card" style="text-align: center; padding: 40px;">
-                            <p style="color: #888; font-size: 18px;">Результат по этому экзамену не найден.</p>
-                            <p style="color: #aaa; margin-top: 8px;">Возможно, экзамен был удалён учителем.</p>
-                        </section>
-                    `;
+                    content.innerHTML = `<section class="card" style="text-align: center; padding: 40px;"><p style="color: #888; font-size: 18px;">Результат по этому экзамену не найден.</p></section>`;
                     return;
                 }
 
                 const tasks = result.tasksStats || [];
 
                 if (tasks.length === 0) {
-                    content.innerHTML = `
-                        <section class="card" style="text-align: center; padding: 40px;">
-                            <p style="color: #888;">Нет данных по заданиям.</p>
-                        </section>
-                    `;
+                    content.innerHTML = `<section class="card" style="text-align: center; padding: 40px;"><p style="color: #888;">Нет данных по заданиям.</p></section>`;
                     return;
                 }
 
-                // Считаем сводку
                 let solved = 0, partial = 0, wrong = 0;
                 tasks.forEach(t => {
                     if (t.score === t.max) solved++;
@@ -133,6 +112,11 @@
                         <p style="color: #555; margin-top: 4px;">
                             первичный балл: <strong>${result.primary} / 29</strong>
                         </p>
+                        ${result.variant ? `
+                            <p style="color: #555; margin-top: 6px;">
+                                Вариант: <strong>${result.variant}</strong>
+                            </p>
+                        ` : ''}
 
                         <div style="margin-top: 20px;">
                             <div class="stat-row">
@@ -165,16 +149,9 @@
                             <tbody>
                                 ${tasks.map(t => {
                                     let badgeClass, badgeText;
-                                    if (t.score === t.max) {
-                                        badgeClass = "badge-green";
-                                        badgeText = "Решено";
-                                    } else if (t.score > 0) {
-                                        badgeClass = "badge-yellow";
-                                        badgeText = "Частично";
-                                    } else {
-                                        badgeClass = "badge-red";
-                                        badgeText = "Не решено";
-                                    }
+                                    if (t.score === t.max) { badgeClass = "badge-green"; badgeText = "Решено"; }
+                                    else if (t.score > 0) { badgeClass = "badge-yellow"; badgeText = "Частично"; }
+                                    else { badgeClass = "badge-red"; badgeText = "Не решено"; }
                                     return `
                                         <tr>
                                             <td><strong>${t.num}</strong></td>
