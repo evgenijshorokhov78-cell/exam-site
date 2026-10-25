@@ -40,17 +40,12 @@
 
         const token = localStorage.getItem('authToken');
         const userJson = localStorage.getItem('userInfo');
-
-        if (!token || !userJson) {
-            window.location.href = 'login.html';
-        }
+        if (!token || !userJson) window.location.href = 'login.html';
         const user = JSON.parse(userJson);
 
         document.getElementById('logoutBtn').addEventListener('click', async (e) => {
             e.preventDefault();
-            try {
-                await fetch(`${API_URL}?action=logout&token=${encodeURIComponent(token)}`);
-            } catch (err) {}
+            try { await fetch(`${API_URL}?action=logout&token=${encodeURIComponent(token)}`); } catch (err) {}
             localStorage.removeItem('authToken');
             localStorage.removeItem('userInfo');
             window.location.href = 'login.html';
@@ -65,7 +60,6 @@
                 const response = await fetch(url);
                 const data = await response.json();
 
-                // Если токен недействителен — выкидываем
                 if (!data.success) {
                     if (data.error === "Не авторизован") {
                         localStorage.removeItem('authToken');
@@ -94,7 +88,6 @@
                     return;
                 }
 
-                // ====== СВОДКА ======
                 const testScores = results.map(r => r.test);
                 const avgTest = (testScores.reduce((a, b) => a + b, 0) / testScores.length).toFixed(1);
                 const bestTest = Math.max(...testScores);
@@ -104,7 +97,6 @@
                 const growth = lastTest - firstTest;
                 const growthSign = growth >= 0 ? '+' : '';
 
-                // ====== АНАЛИЗ ПО ВСЕМ 27 ЗАДАНИЯМ ======
                 const tasksProblems = [];
                 const taskTotal = results.length;
 
@@ -116,7 +108,6 @@
                     results.forEach(r => {
                         if ((r.wrongTasks || []).includes(num)) wrongCount++;
                         if ((r.partialTasks || []).includes(num)) partialCount++;
-
                         if (r.tasksStats) {
                             const t = r.tasksStats.find(x => x.num === num);
                             if (t && t.topic) topic = t.topic;
@@ -129,16 +120,11 @@
                     const rate = taskTotal > 0 ? Math.round(failCount * 100 / taskTotal) : 0;
 
                     tasksProblems.push({
-                        num: num,
-                        topic: topic,
-                        wrongCount: wrongCount,
-                        partialCount: partialCount,
-                        total: taskTotal,
-                        rate: rate
+                        num: num, topic: topic, wrongCount: wrongCount,
+                        partialCount: partialCount, total: taskTotal, rate: rate
                     });
                 }
 
-                // ====== РИСУЕМ ======
                 content.innerHTML = `
                     <section class="grid">
                         <div class="card">
@@ -146,7 +132,6 @@
                             <p style="font-size: 36px; font-weight: bold; color: #3498db;">${avgTest}</p>
                             <p style="color: #888;">за ${results.length} экзамен(ов)</p>
                         </div>
-
                         <div class="card">
                             <h2>Рост за период</h2>
                             <p style="font-size: 36px; font-weight: bold; color: ${growth >= 0 ? '#27ae60' : '#e74c3c'};">
@@ -154,13 +139,11 @@
                             </p>
                             <p style="color: #888;">от первого к последнему</p>
                         </div>
-
                         <div class="card">
                             <h2>Пройдено экзаменов</h2>
                             <p style="font-size: 36px; font-weight: bold; color: #f39c12;">${results.length}</p>
                             <p style="color: #888;">в этом учебном году</p>
                         </div>
-
                         <div class="card">
                             <h2>Лучший результат</h2>
                             <p style="font-size: 36px; font-weight: bold; color: #27ae60;">${bestTest}</p>
@@ -180,6 +163,7 @@
                             <thead>
                                 <tr>
                                     <th>Экзамен</th>
+                                    <th>Вариант</th>
                                     <th>Первичный</th>
                                     <th>Тестовый</th>
                                     <th style="width: 120px;"></th>
@@ -189,6 +173,7 @@
                                 ${results.map(r => `
                                     <tr>
                                         <td>${r.exam}</td>
+                                        <td>${r.variant ? '<span class="badge badge-green">' + r.variant + '</span>' : '—'}</td>
                                         <td>${r.primary} / 29</td>
                                         <td><strong>${r.test}</strong></td>
                                         <td>
@@ -233,7 +218,6 @@
                     </section>
                 `;
 
-                // ====== ГРАФИК ======
                 const chartLabels = results.slice().reverse().map(r => r.exam);
                 const chartValues = results.slice().reverse().map(r => r.test);
 
@@ -243,28 +227,14 @@
                     data: {
                         labels: chartLabels,
                         datasets: [{
-                            label: 'Тестовый балл',
-                            data: chartValues,
-                            borderColor: '#3498db',
-                            backgroundColor: 'rgba(52,152,219,.1)',
-                            tension: 0.3,
-                            fill: true,
-                            pointRadius: 6,
-                            pointBackgroundColor: '#3498db'
+                            label: 'Тестовый балл', data: chartValues,
+                            borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,.1)',
+                            tension: 0.3, fill: true, pointRadius: 6, pointBackgroundColor: '#3498db'
                         }]
                     },
                     options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { position: 'bottom' }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: false,
-                                min: 0,
-                                max: 100
-                            }
-                        }
+                        responsive: true, plugins: { legend: { position: 'bottom' } },
+                        scales: { y: { beginAtZero: false, min: 0, max: 100 } }
                     }
                 });
 
